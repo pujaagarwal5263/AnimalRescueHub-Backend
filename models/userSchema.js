@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const animalReportSchema = require("./animalReportSchema")
+const animalReportSchema = require('./animalReportSchema');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -11,15 +11,20 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
-  password:{
+  password: {
     type: String,
-    required: true
+    required: true,
   },
-  city:{
+  city: {
     type: String,
-    required: true
+    required: true,
   },
-  animalReports: [animalReportSchema],
+  animalReportIDs: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'AnimalReport'
+      }
+    ]
 });
 
 const User = mongoose.model('User', userSchema);

@@ -1,20 +1,28 @@
 const mongoose = require('mongoose');
 
+const updateSchema = new mongoose.Schema({
+  status: {
+    type: String,
+    required: true,
+  },
+  updateTime: {
+    type: Date,
+    required: true,
+  },
+  remark: String,
+});
+
 const animalReportSchema = new mongoose.Schema({
   reporter: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   },
-  latitude: {
+  locationURL: {
     type: String,
     required: true
   },
-  longitude:{
-    type: String,
-    required: true
-  },
-  location: {
+  landmark: {
     type: String,
     required: true,
   },
@@ -37,7 +45,8 @@ const animalReportSchema = new mongoose.Schema({
   status:{
     type: String,
     default: "Unresolved"
-  }
+  },
+  updatesArray: [updateSchema], // Array of update objects
 });
 
 const AnimalReport = mongoose.model('AnimalReport', animalReportSchema);
