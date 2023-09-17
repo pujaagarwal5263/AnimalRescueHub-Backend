@@ -7,6 +7,7 @@ configDotenv();
 require("./db-connection");
 //require("./data-insertion");
 
+app.use(express.json())
 app.use(router);
 
 app.listen(port, () => {

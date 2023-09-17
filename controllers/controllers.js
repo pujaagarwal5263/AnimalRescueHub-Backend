@@ -3,18 +3,18 @@ const animalReport = require("../models/animalReportSchema");
 const Admin = require("../models/adminSchema");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const Razorpay = require("razorpay");
 
 const formatDateTime = (timestamp) => {
-    const date = new Date(timestamp);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    const formattedTime =
-      hours % 12 + ":" + minutes + " " + ampm;
-    return `${year}-${month}-${day} ${formattedTime}`;
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const formattedTime = (hours % 12) + ":" + minutes + " " + ampm;
+  return `${year}-${month}-${day} ${formattedTime}`;
 };
 
 const hello = (req, res) => {
@@ -46,7 +46,7 @@ const login = async (req, res) => {
   }
 };
 
-const adminLogin = async(req,res) =>{
+const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await Admin.findOne({ email });
@@ -54,7 +54,7 @@ const adminLogin = async(req,res) =>{
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = password ==user.password
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
@@ -69,7 +69,7 @@ const adminLogin = async(req,res) =>{
     console.error(error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
 const signup = async (req, res) => {
   try {
@@ -141,9 +141,9 @@ const addAnimalReport = async (req, res) => {
     await user.save();
 
     return res.status(200).json({
-        message: "Animal report created successfully",
-        reportId: newAnimalReport._id, 
-      });
+      message: "Animal report created successfully",
+      reportId: newAnimalReport._id,
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Internal Server Error" });
@@ -175,9 +175,11 @@ const deleteAnimalReportById = async (req, res) => {
     if (!existingReport) {
       return res.status(404).json({ message: "Animal report not found" });
     }
-    await existingReport.remove();
+    await existingReport.deleteOne({_id: reportId});
 
-    return res.status(200).json({ message: "Animal report deleted successfully" });
+    return res
+      .status(200)
+      .json({ message: "Animal report deleted successfully" });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Internal Server Error" });
@@ -186,95 +188,139 @@ const deleteAnimalReportById = async (req, res) => {
 
 //accessible to admin
 const updateAnimalReportByAdmin = async (req, res) => {
-    try {
-      const { reportId, status, remark } = req.body; 
+  try {
+    const { reportId, status, remark } = req.body;
 
-      const foundAnimalReport = await animalReport.findById(reportId);
-      if (!foundAnimalReport) {
-        return res.status(404).json({ message: "Animal report not found" });
-      }
-  
-      foundAnimalReport.updatesArray.push({
-        status,
-        updateTime: new Date(), // Store the current timestamp
-        remark,
-      });
-  
-      foundAnimalReport.status = status;
-      await foundAnimalReport.save();
-  
-      return res.status(200).json({ message: "Animal report updated successfully" });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: "Internal Server Error" });
+    const foundAnimalReport = await animalReport.findById(reportId);
+    if (!foundAnimalReport) {
+      return res.status(404).json({ message: "Animal report not found" });
     }
-  };
+
+    foundAnimalReport.updatesArray.push({
+      status,
+      updateTime: new Date(), // Store the current timestamp
+      remark,
+    });
+
+    foundAnimalReport.status = status;
+    await foundAnimalReport.save();
+
+    return res
+      .status(200)
+      .json({ message: "Animal report updated successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 const getUpdateArrayByReportId = async (req, res) => {
-    try {
-      const { reportId } = req.params;
-  
-      const foundAnimalReport = await AnimalReport.findById(reportId);
-      if (!foundAnimalReport) {
-        return res.status(404).json({ message: "Animal report not found" });
-      }
-  
-      // Get the update array from the animal report and format the timestamps
-      const updateArray = foundAnimalReport.updatesArray.map((update) => ({
-        ...update._doc,
-        updateTime: formatDateTime(update.updateTime), 
-      }));
-  
-      return res.status(200).json(updateArray);
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: "Internal Server Error" });
+  try {
+    const { reportId } = req.params;
+
+    const foundAnimalReport = await animalReport.findById(reportId);
+    if (!foundAnimalReport) {
+      return res.status(404).json({ message: "Animal report not found" });
     }
+
+    // Get the update array from the animal report and format the timestamps
+    const updateArray = foundAnimalReport.updatesArray.map((update) => ({
+      ...update._doc,
+      updateTime: formatDateTime(update.updateTime),
+    }));
+
+    return res.status(200).json(updateArray);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
 };
 
 const updateAnimalReportByUser = async (req, res) => {
-    try {
-      const { reportId } = req.body;
-      const updateFields = {};
-  
-      // Optional fields that may be updated
-      const optionalFields = [
-        "locationURL",
-        "landmark",
-        "animalName",
-        "breed",
-        "condition",
-        "newURLs",
-      ];
-  
-      // Check if each optional field exists in the request body and update if provided
-      optionalFields.forEach((field) => {
-        if (req.body[field] !== undefined) {
-          updateFields[field] = req.body[field];
-        }
-      });
-  
-      const foundAnimalReport = await animalReport.findById(reportId);
-      if (!foundAnimalReport) {
-        return res.status(404).json({ message: "Animal report not found" });
+  try {
+    const { reportId } = req.body;
+    const updateFields = {};
+
+    // Optional fields that may be updated
+    const optionalFields = [
+      "locationURL",
+      "landmark",
+      "animalName",
+      "breed",
+      "condition",
+      "newURLs",
+    ];
+
+    // Check if each optional field exists in the request body and update if provided
+    optionalFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updateFields[field] = req.body[field];
       }
-  
-      // Update the animal report fields if provided
-      Object.assign(foundAnimalReport, updateFields);
-  
-      // Append new URLs to the existing imageUrls array if provided
-      if (req.body.newURLs) {
-        foundAnimalReport.imageUrls = [...foundAnimalReport.imageUrls, ...req.body.newURLs];
-      }
-  
-      // Save the updated animal report
-      await foundAnimalReport.save();
-  
-      return res.status(200).json({ message: "Animal report updated successfully" });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: "Internal Server Error" });
+    });
+
+    const foundAnimalReport = await animalReport.findById(reportId);
+    if (!foundAnimalReport) {
+      return res.status(404).json({ message: "Animal report not found" });
     }
+
+    // Update the animal report fields if provided
+    Object.assign(foundAnimalReport, updateFields);
+
+    // Append new URLs to the existing imageUrls array if provided
+    if (req.body.newURLs) {
+      foundAnimalReport.imageUrls = [
+        ...foundAnimalReport.imageUrls,
+        ...req.body.newURLs,
+      ];
+    }
+
+    // Save the updated animal report
+    await foundAnimalReport.save();
+
+    return res
+      .status(200)
+      .json({ message: "Animal report updated successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
 };
 
-module.exports = { hello, login, signup, adminLogin, getAllAnimalReports, getUserAnimalReports, addAnimalReport, deleteAnimalReportById,  getUpdateArrayByReportId, updateAnimalReportByUser, updateAnimalReportByAdmin };
+const paymentIntegration = async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const instance = new Razorpay({
+      key_id: "rzp_test_XphPOSB4djGspx",
+      key_secret: "CCrxVo3coD3SKNM3a0Bbh2my",
+    });
+
+    const options = {
+      amount: amount,
+      currency: "INR",
+      // receipt: "receipt_order_74394",
+    };
+
+    const order = await instance.orders.create(options);
+
+    if (!order) return res.status(500).send("Some error occured");
+
+    return res.json(order);
+  } catch (error) {
+    return res.status(500).send(error);
+  }
+};
+
+module.exports = {
+  hello,
+  login,
+  signup,
+  adminLogin,
+  getAllAnimalReports,
+  paymentIntegration,
+  getUserAnimalReports,
+  addAnimalReport,
+  deleteAnimalReportById,
+  getUpdateArrayByReportId,
+  updateAnimalReportByUser,
+  updateAnimalReportByAdmin,
+};
