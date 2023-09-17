@@ -5,6 +5,10 @@ const controllers = require("../controllers/controllers")
 router.get('/', controllers.hello);
 router.post('/login',controllers.login);
 router.post('/signup',controllers.signup);
+router.post('/admin-login',controllers.adminLogin);
+
+//all routes below this are protected
+require("../middlewares/verify-token");
 
 // report a new case
 router.post('/report-animal',controllers.addAnimalReport);

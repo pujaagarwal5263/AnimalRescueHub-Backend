@@ -1,5 +1,6 @@
 const User = require("../models/userSchema");
 const animalReport = require("../models/animalReportSchema");
+const Admin = require("../models/adminSchema");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
@@ -34,7 +35,7 @@ const login = async (req, res) => {
     }
 
     // If the passwords match, generate a JWT token and send it in the response
-    const token = jwt.sign({ userId: user._id }, "your-secret-key", {
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
@@ -44,6 +45,31 @@ const login = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+const adminLogin = async(req,res) =>{
+  try {
+    const { email, password } = req.body;
+    const user = await Admin.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // If the passwords match, generate a JWT token and send it in the response
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    return res.status(200).json({ token });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+}
 
 const signup = async (req, res) => {
   try {
@@ -251,4 +277,4 @@ const updateAnimalReportByUser = async (req, res) => {
     }
 };
 
-module.exports = { hello, login, signup, getAllAnimalReports, getUserAnimalReports, addAnimalReport, deleteAnimalReportById,  getUpdateArrayByReportId, updateAnimalReportByUser, updateAnimalReportByAdmin };
+module.exports = { hello, login, signup, adminLogin, getAllAnimalReports, getUserAnimalReports, addAnimalReport, deleteAnimalReportById,  getUpdateArrayByReportId, updateAnimalReportByUser, updateAnimalReportByAdmin };
