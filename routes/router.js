@@ -13,7 +13,7 @@ router.post('/orders',controllers.paymentIntegration);
 router.post('/report-animal',isAuthenticated,controllers.addAnimalReport);
 
 // get own cases
-router.get("/get-my-reports/:email", isAuthenticated, controllers.getUserAnimalReports);
+router.get("/get-my-reports", isAuthenticated, controllers.getUserAnimalReports);
 
 //update your own animal report
 router.post("/update-my-report", isAuthenticated, controllers.updateAnimalReportByUser);

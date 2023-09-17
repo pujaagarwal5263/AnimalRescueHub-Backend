@@ -4,7 +4,20 @@ const Admin = require("../models/adminSchema");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const Razorpay = require("razorpay");
+const nodemailer = require("nodemailer");
 
+const sendEmail = async (mailOptions) => {
+  const transporter = await nodemailer.createTransport({
+    service: process.env.MAIL_SERVICE,
+    auth: {
+      user: process.env.PLATFORM_EMAIL,
+      pass: process.env.APP_PASSWORD,
+    },
+  });
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log(`Message sent with ID ${info.messageId}`);
+};
 const formatDateTime = (timestamp) => {
   const date = new Date(timestamp);
   const year = date.getFullYear();
@@ -35,7 +48,7 @@ const login = async (req, res) => {
     }
 
     // If the passwords match, generate a JWT token and send it in the response
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
@@ -54,13 +67,13 @@ const adminLogin = async (req, res) => {
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
-    const isPasswordValid = password ==user.password
+    const isPasswordValid = password == user.password;
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
     // If the passwords match, generate a JWT token and send it in the response
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
@@ -111,7 +124,6 @@ const getAllAnimalReports = async (req, res) => {
 const addAnimalReport = async (req, res) => {
   try {
     const {
-      email,
       locationURL,
       landmark,
       animalName,
@@ -120,7 +132,7 @@ const addAnimalReport = async (req, res) => {
       imageUrls,
     } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: req.user.email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -140,6 +152,26 @@ const addAnimalReport = async (req, res) => {
     user.animalReportIDs.push(newAnimalReport._id);
     await user.save();
 
+    const mailOptions = {
+      from: "Animal Rescue Hub",
+      to: req.user.email,
+      subject: "New Animal Rescue Report Filed!",
+      html: `<div>
+     <h2>Greetings for the day!</h2>
+     <h3>Thanks for joining hands with us on a mission to create a better world for all creatures.</h3>
+     <p>You have reported a Animal Rescue Case with Report Ref: ${newAnimalReport._id}</p>
+     <p>We'll keep you posted on this.</p>
+     <p>You can also keep track of your report with this reference number.</p>
+     <hr/>
+     <p><i><b>
+     Regards, <br/>
+     Animal Rescue Hub
+     </b></i></p>
+     </div>`,
+    };
+
+    await sendEmail(mailOptions);
+
     return res.status(200).json({
       message: "Animal report created successfully",
       reportId: newAnimalReport._id,
@@ -152,9 +184,7 @@ const addAnimalReport = async (req, res) => {
 
 const getUserAnimalReports = async (req, res) => {
   try {
-    // forced to send in params as react does not allow body in GET
-    const { email } = req.params;
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: req.user.email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -175,7 +205,7 @@ const deleteAnimalReportById = async (req, res) => {
     if (!existingReport) {
       return res.status(404).json({ message: "Animal report not found" });
     }
-    await existingReport.deleteOne({_id: reportId});
+    await existingReport.deleteOne({ _id: reportId });
 
     return res
       .status(200)
@@ -205,6 +235,31 @@ const updateAnimalReportByAdmin = async (req, res) => {
     foundAnimalReport.status = status;
     await foundAnimalReport.save();
 
+    const reporterId = foundAnimalReport.reporter;
+    const reporter = await User.findById(reporterId);
+    if (!reporter) {
+      return res.status(404).json({ message: "Reporter not found" });
+    }
+    const reporterEmail = reporter.email;
+
+    const mailOptions = {
+      from: "Animal Rescue Hub",
+      to: reporterEmail,
+      subject: "Update on your animal Report",
+      html: `<div>
+     <h2>Greetings for the day!</h2>
+     <p>You have an update on Animal Rescue Report Ref: ${reportId}</p>
+     <p>Status was changed to <b>${status}</b> with following remarks:</p>
+     <i>${remark}</i>
+     <hr/>
+     <p><i><b>
+     Regards, <br/>
+     Animal Rescue Hub
+     </b></i></p>
+     </div>`,
+    };
+
+    await sendEmail(mailOptions);
     return res
       .status(200)
       .json({ message: "Animal report updated successfully" });
@@ -290,8 +345,8 @@ const paymentIntegration = async (req, res) => {
   try {
     const { amount } = req.body;
     const instance = new Razorpay({
-      key_id: "rzp_test_XphPOSB4djGspx",
-      key_secret: "CCrxVo3coD3SKNM3a0Bbh2my",
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
     });
 
     const options = {
