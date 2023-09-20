@@ -40,7 +40,7 @@ const login = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "User not found" });
     }
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
@@ -52,7 +52,7 @@ const login = async (req, res) => {
       expiresIn: "7d",
     });
 
-    return res.status(200).json({ token });
+    return res.status(200).json({ message: "Login Successful",userID: user._id, name: user.name, email: user.email, token: token });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Internal Server Error" });
@@ -86,6 +86,7 @@ const adminLogin = async (req, res) => {
 
 const signup = async (req, res) => {
   try {
+    console.log("object");
     const { name, email, password, city } = req.body;
     const existingUser = await User.findOne({ email });
 
