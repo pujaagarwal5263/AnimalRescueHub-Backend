@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const Razorpay = require("razorpay");
 const nodemailer = require("nodemailer");
+const mongoose = require("mongoose")
 
 const sendEmail = async (mailOptions) => {
   const transporter = await nodemailer.createTransport({
@@ -273,10 +274,11 @@ const updateAnimalReportByAdmin = async (req, res) => {
 const getUpdateArrayByReportId = async (req, res) => {
   try {
     const { reportId } = req.params;
+    const objectId = new mongoose.Types.ObjectId(reportId);
 
-    const foundAnimalReport = await animalReport.findById(reportId);
+    const foundAnimalReport = await animalReport.findById(objectId);
     if (!foundAnimalReport) {
-      return res.status(404).json({ message: "Animal report not found" });
+      return res.status(201).json({ message: "Animal report not found" });
     }
 
     // Get the update array from the animal report and format the timestamps
