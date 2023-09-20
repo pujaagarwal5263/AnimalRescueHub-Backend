@@ -114,7 +114,7 @@ const signup = async (req, res) => {
 
 const getAllAnimalReports = async (req, res) => {
   try {
-    const animalReports = await animalReport.find();
+    const animalReports = await animalReport.find().populate('reporter', 'name');
     return res.status(200).json(animalReports);
   } catch (error) {
     console.error(error);
