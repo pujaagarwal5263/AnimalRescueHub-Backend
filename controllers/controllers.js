@@ -78,7 +78,7 @@ const adminLogin = async (req, res) => {
       expiresIn: "7d",
     });
 
-    return res.status(200).json({ token });
+    return res.status(200).json({ token: token, message: "Admin Login Successful" });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Internal Server Error" });
