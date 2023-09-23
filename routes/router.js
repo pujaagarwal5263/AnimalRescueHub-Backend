@@ -27,6 +27,9 @@ router.get('/get-all-reports',controllers.getAllAnimalReports);
 // track report by ID
 router.get("/track/:reportId", isAuthenticated, controllers.getUpdateArrayByReportId);
 
+// get report by ID
+router.get("/get-report-by-id/:reportId",isAuthenticated,controllers.getReportByID)
+
 //admin updates report
 router.post('/admin-update-report', isAuthenticated, controllers.updateAnimalReportByAdmin);
 

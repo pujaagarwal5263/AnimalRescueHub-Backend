@@ -123,6 +123,22 @@ const getAllAnimalReports = async (req, res) => {
   }
 };
 
+const getReportByID = async (req, res) =>{
+  try{
+    const { reportId } = req.params;
+    const objectId = new mongoose.Types.ObjectId(reportId);
+
+    const foundAnimalReport = await animalReport.findById(reportId);
+    if (!foundAnimalReport) {
+      return res.status(201).json({ message: "Animal report not found" });
+    }
+    return res.status(200).json({message:"Updates fetched successfully",report: foundAnimalReport});
+  }catch(err){
+    console.log(err);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
 const addAnimalReport = async (req, res) => {
   try {
     const {
@@ -287,7 +303,7 @@ const getUpdateArrayByReportId = async (req, res) => {
       updateTime: formatDateTime(update.updateTime),
     }));
 
-    return res.status(200).json(updateArray);
+    return res.status(200).json({message:"Updates fetched successfully",updates: updateArray});
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Internal Server Error" });
@@ -381,4 +397,5 @@ module.exports = {
   getUpdateArrayByReportId,
   updateAnimalReportByUser,
   updateAnimalReportByAdmin,
+  getReportByID
 };
