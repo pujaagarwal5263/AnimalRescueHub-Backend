@@ -128,7 +128,7 @@ const getReportByID = async (req, res) =>{
     const { reportId } = req.params;
     const objectId = new mongoose.Types.ObjectId(reportId);
 
-    const foundAnimalReport = await animalReport.findById(reportId);
+    const foundAnimalReport = await animalReport.findById(reportId).populate('reporter', 'name');
     if (!foundAnimalReport) {
       return res.status(201).json({ message: "Animal report not found" });
     }
