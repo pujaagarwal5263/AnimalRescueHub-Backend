@@ -25,7 +25,7 @@ router.post('/delete-report', isAuthenticated, controllers.deleteAnimalReportByI
 router.get('/get-all-reports',controllers.getAllAnimalReports);
 
 // track report by ID
-router.get("/track/:reportId", isAuthenticated, controllers.getUpdateArrayByReportId);
+router.get("/track/:reportId", controllers.getUpdateArrayByReportId);
 
 // get report by ID
 router.get("/get-report-by-id/:reportId",isAuthenticated,controllers.getReportByID)
