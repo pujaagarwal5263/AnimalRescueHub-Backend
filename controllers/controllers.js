@@ -289,7 +289,7 @@ const updateAnimalReportByAdmin = async (req, res) => {
 
 const getUpdateArrayByReportId = async (req, res) => {
   try {
-    const { reportId } = req.params;
+    const { reportId } = req.body;
     const objectId = new mongoose.Types.ObjectId(reportId);
 
     const foundAnimalReport = await animalReport.findById(objectId);
